@@ -16,7 +16,13 @@ public class A4GameManager : MonoBehaviour
 
     public int difficulty = 1;
 
+    public int playerSkill;
+
+    private float remainingTime;
+
     private int boardSize;
+
+    private int remainingAttempts;
 
     private Letters[] answerKey;
 
@@ -39,7 +45,19 @@ public class A4GameManager : MonoBehaviour
     private GameObject hardBoard;
 
     [SerializeField]
-    private GameObject OutputLog;
+    private GameObject outputLog;
+
+    [SerializeField]
+    private GameObject difficultyText;
+    
+    [SerializeField]
+    private GameObject timerText;
+
+    [SerializeField]
+    private GameObject winScreen;
+
+    [SerializeField]
+    private GameObject loseScreen;
 
     [SerializeField]
     private Sprite blank;
@@ -61,10 +79,14 @@ public class A4GameManager : MonoBehaviour
 
     public void Initialize()
     {
-        OutputLog.GetComponent<OutputLog>().ResetLog();
+        outputLog.GetComponent<OutputLog>().ResetLog();
 
         currentLetter = 0;
         boardSize = 3 + difficulty;
+        remainingAttempts = 10;
+
+        remainingTime = 60.0f + playerSkill;
+
         inputLock = false;
         winLock = false;
 
@@ -72,33 +94,44 @@ public class A4GameManager : MonoBehaviour
         guesses = new Letters[boardSize];
         letterStatus = new int[boardSize];
 
+        ResetBoard();
+
         for (int i = 0; i < answerKey.Length; i++)
         {
             answerKey[i] = (Letters)Random.Range(0, 26);
             letterStatus[i] = 0;
         }
 
+        easyBoard.SetActive(false);
+        mediumBoard.SetActive(false);
+        hardBoard.SetActive(false);
+        winScreen.SetActive(false);
+        loseScreen.SetActive(false);
+
         if (difficulty == 1)
         {
+            easyBoard.SetActive(true);
+            difficultyText.GetComponent<TextMeshProUGUI>().text = "Easy";
             foreach (Transform child in easyBoard.transform)
             {
-
                 child.GetChild(0).gameObject.GetComponent<Image>().sprite = blank;
             }
         }
         else if (difficulty == 2)
         {
+            mediumBoard.SetActive(true);
+            difficultyText.GetComponent<TextMeshProUGUI>().text = "Medium";
             foreach (Transform child in mediumBoard.transform)
             {
-
                 child.GetChild(0).gameObject.GetComponent<Image>().sprite = blank;
             }
         }
-        else if (difficulty == 3)
+        else if (difficulty >= 3)
         {
+            hardBoard.SetActive(true);
+            difficultyText.GetComponent<TextMeshProUGUI>().text = "Hard";
             foreach (Transform child in hardBoard.transform)
             {
-
                 child.GetChild(0).gameObject.GetComponent<Image>().sprite = blank;
             }
         }
@@ -108,7 +141,20 @@ public class A4GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (!winLock && !inputLock)//Timer
+        {
+            if (remainingTime > 0)
+            {
+                remainingTime -= Time.deltaTime;
+            }
+            else
+            {
+                winLock = true;
+                loseScreen.SetActive(true);
+            }
+        }
+
+        timerText.GetComponent<TextMeshProUGUI>().text = (Mathf.Round(remainingTime)).ToString();
     }
 
     public void KeyboardInput(int key)
@@ -139,8 +185,9 @@ public class A4GameManager : MonoBehaviour
 
     private void CheckForWin()
     {
-        if (currentLetter >= boardSize && inputLock == false && winLock == false) 
+        if (currentLetter >= boardSize && inputLock == false && winLock == false)
         {
+            remainingAttempts--;
             inputLock = true;
             for (int i = 0; i < answerKey.Length; i++)
             {
@@ -154,7 +201,7 @@ public class A4GameManager : MonoBehaviour
                     {
                         mediumBoard.transform.GetChild(i).GetChild(0).gameObject.GetComponent<Image>().sprite = left;
                     }
-                    else if (difficulty == 3)
+                    else if (difficulty >= 3)
                     {
                         hardBoard.transform.GetChild(i).GetChild(0).gameObject.GetComponent<Image>().sprite = left;
                     }
@@ -171,7 +218,7 @@ public class A4GameManager : MonoBehaviour
                     {
                         mediumBoard.transform.GetChild(i).GetChild(0).gameObject.GetComponent<Image>().sprite = correct;
                     }
-                    else if (difficulty == 3)
+                    else if (difficulty >= 3)
                     {
                         hardBoard.transform.GetChild(i).GetChild(0).gameObject.GetComponent<Image>().sprite = correct;
                     }
@@ -188,7 +235,7 @@ public class A4GameManager : MonoBehaviour
                     {
                         mediumBoard.transform.GetChild(i).GetChild(0).gameObject.GetComponent<Image>().sprite = right;
                     }
-                    else if (difficulty == 3)
+                    else if (difficulty >= 3)
                     {
                         hardBoard.transform.GetChild(i).GetChild(0).gameObject.GetComponent<Image>().sprite = right;
                     }
@@ -210,12 +257,14 @@ public class A4GameManager : MonoBehaviour
 
             if (winCheck)
             {
-                //Win
+                difficulty++;
+                winScreen.SetActive(true);
+                winLock = true;
             }
-            else
+            else if(0 >= remainingAttempts)
             {
-                
-                //Subtract Attempt
+                loseScreen.SetActive(true);
+                winLock = true;
             }
 
             string guessesText = "";
@@ -225,18 +274,26 @@ public class A4GameManager : MonoBehaviour
             {
                 guessesText = guessesText + guesses[i].ToString();
 
-                if (letterStatus[i] != 2)
+                if (letterStatus[i] == 1)
                 {
-                    statusText = statusText + "X";
+                    statusText = statusText + "<";
+                }
+                else if (letterStatus[i] == 2)
+                {
+                    statusText = statusText + "O";
+                }
+                else if (letterStatus[i] == 3)
+                {
+                    statusText = statusText + ">";
                 }
                 else
                 {
-                    statusText = statusText + "O";
+                    statusText = statusText + "X";
                 }
                 Debug.Log("Test");
                 
             }
-            OutputLog.GetComponent<OutputLog>().AddOutput(guessesText + " | " + statusText);
+            outputLog.GetComponent<OutputLog>().AddOutput(guessesText + " | " + statusText);
         }
     }
 
